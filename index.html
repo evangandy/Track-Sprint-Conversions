@@ -1,192 +1,335 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
-
-const SprintTimeConverter = () => {
-  // Conversion table from the image
-  const conversionTable = {
-    distances: [36.576, 50, 55, 60, 100, 200],
-    ratios: [
-      [1, 0.7680406888, 0.6879633611, 0.6400911027, 0.4156435732, 0.1951099662],
-      [1.302022728, 1, 0.8957511648, 0.8334198251, 0.5411817046, 0.2540211598],
-      [1.453580765, 1.1164181518, 1, 0.9304168742, 0.6041668015, 0.2836335064],
-      [1.562328762, 1.1999441652, 1.0748165, 1, 0.6493506494, 0.3048232375],
-      [2.405986293, 1.8479101448, 1.6552174571, 1.54, 1, 0.4694278434],
-      [5.130391123, 3.9400926701, 3.5298386571, 3.2839024271, 2.1324041748, 1]
-    ]
-  };
-
-  // State
-  const [knownDistance, setKnownDistance] = useState(36.576);
-  const [knownTime, setKnownTime] = useState(4.5);
-  const [targetDistance, setTargetDistance] = useState(100);
-  const [predictedTime, setPredictedTime] = useState(null);
-  const [modelTimes, setModelTimes] = useState([]);
-  // No tabs state needed
-
-  // Calculate predicted time
-  useEffect(() => {
-    if (knownDistance && knownTime && targetDistance) {
-      // Find indices
-      const knownIndex = conversionTable.distances.indexOf(parseFloat(knownDistance));
-      const targetIndex = conversionTable.distances.indexOf(parseFloat(targetDistance));
-      
-      if (knownIndex !== -1 && targetIndex !== -1) {
-        // Get ratio from table
-        const ratio = conversionTable.ratios[targetIndex][knownIndex];
-        const calculatedTime = (parseFloat(knownTime) * ratio).toFixed(2);
-        setPredictedTime(calculatedTime);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Performance Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .inputs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        select, input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+        .results {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .prediction {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .chart-container {
+            margin: 20px 0;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            cursor: pointer;
+            position: relative;
+            white-space: nowrap;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .highlighted {
+            background-color: #e8f4ff;
+        }
+        .chart {
+            height: 300px;
+            width: 100%;
+        }
+        footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .footer-section a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer-section a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Sprint Performance Analyzer</h1>
         
-        // Calculate all times for the chart
-        const times = conversionTable.distances.map((dist, idx) => {
-          const r = conversionTable.ratios[idx][knownIndex];
-          return {
-            distance: dist,
-            time: parseFloat((parseFloat(knownTime) * r).toFixed(2))
-          };
-        });
-        setModelTimes(times);
-      }
-    }
-  }, [knownDistance, knownTime, targetDistance]);
-
-  // Format numbers with 2 decimal places
-  const formatNumber = (num) => {
-    return parseFloat(num).toFixed(2);
-  };
-
-  // No heatmap code needed anymore
-
-  // Generate comparison table data
-  const generateTimesTable = () => {
-    if (!knownDistance || !knownTime) return [];
-    
-    return conversionTable.distances.map(dist => {
-      const tableIdx = conversionTable.distances.indexOf(parseFloat(knownDistance));
-      const targetIdx = conversionTable.distances.indexOf(parseFloat(dist));
-      
-      let tableTime = null;
-      if (tableIdx !== -1 && targetIdx !== -1) {
-        const ratio = conversionTable.ratios[targetIdx][tableIdx];
-        tableTime = knownTime * ratio;
-      }
-      
-      return {
-        distance: dist,
-        tableTime: tableTime ? parseFloat(tableTime.toFixed(2)) : null
-      };
-    });
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto p-4 bg-gray-50 rounded-lg shadow">
-      <h1 className="text-2xl font-bold text-center mb-6">Sprint Performance Analyzer</h1>
-      
-      {/* No tabs needed since we only have the converter now */}
-      
-      <div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 bg-white rounded shadow">
-            <label className="block mb-2 font-semibold">Known Distance (meters)</label>
-            <select 
-              className="w-full p-2 border rounded"
-              value={knownDistance}
-              onChange={(e) => setKnownDistance(parseFloat(e.target.value))}
-            >
-              {conversionTable.distances.map(dist => (
-                <option key={dist} value={dist}>{dist}m {dist === 36.576 ? '(40yd)' : ''}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="p-4 bg-white rounded shadow">
-            <label className="block mb-2 font-semibold">Known Time (seconds)</label>
-            <input 
-              type="number" 
-              step="0.01"
-              className="w-full p-2 border rounded"
-              value={knownTime}
-              onChange={(e) => setKnownTime(e.target.value)}
-            />
-          </div>
-          
-          <div className="p-4 bg-white rounded shadow">
-            <label className="block mb-2 font-semibold">Target Distance (meters)</label>
-            <select 
-              className="w-full p-2 border rounded"
-              value={targetDistance}
-              onChange={(e) => setTargetDistance(parseFloat(e.target.value))}
-            >
-              {conversionTable.distances.map(dist => (
-                <option key={dist} value={dist}>{dist}m {dist === 36.576 ? '(40yd)' : ''}</option>
-              ))}
-            </select>
-          </div>
+        <div class="results" id="resultsSection">
+            <h2>Predicted Time</h2>
+            <div class="prediction" id="predictedTime">--</div>
+            <div id="baseInfo">Enter your data below to see predictions</div>
         </div>
-        
-        {predictedTime && (
-          <div className="mb-6 p-6 bg-white rounded shadow text-center">
-            <h2 className="text-xl font-bold mb-2">Predicted Time</h2>
-            <p className="text-3xl font-bold text-blue-600">{predictedTime} seconds</p>
-            <p className="text-sm text-gray-500">
-              Based on {knownTime}s at {knownDistance}m
-            </p>
-          </div>
-        )}
-        
-        {modelTimes.length > 0 && (
-          <div className="mb-6 p-4 bg-white rounded shadow">
-            <h2 className="text-lg font-bold mb-4">Performance Curve</h2>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={modelTimes} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="distance" 
-                    label={{ value: 'Distance (meters)', position: 'insideBottom', offset: -5 }}
-                  />
-                  <YAxis 
-                    label={{ value: 'Time (seconds)', angle: -90, position: 'insideLeft' }}
-                  />
-                  <Tooltip formatter={(value) => [`${value}s`, 'Time']} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="time" 
-                    stroke="#8884d8" 
-                    activeDot={{ r: 8 }}
-                    name="Predicted Time"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+
+        <div class="inputs">
+            <div class="input-group">
+                <label for="knownDistance">Known Distance (meters):</label>
+                <select id="knownDistance">
+                    <option value="36.576">36.576m (40yd)</option>
+                    <option value="50">50m</option>
+                    <option value="55">55m</option>
+                    <option value="60">60m</option>
+                    <option value="100">100m</option>
+                    <option value="200">200m</option>
+                </select>
             </div>
-          </div>
-        )}
-        
-        <div className="mb-6 p-4 bg-white rounded shadow">
-          <h2 className="text-lg font-bold mb-4">Predicted Times for All Distances</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead>
-                <tr>
-                  <th className="p-3 border">Distance (m)</th>
-                  <th className="p-3 border">Predicted Time (s)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {generateTimesTable().map((item, i) => (
-                  <tr key={i} className={item.distance === parseFloat(targetDistance) ? "bg-blue-100" : ""}>
-                    <td className="p-3 border">{item.distance}</td>
-                    <td className="p-3 border">{item.tableTime}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            <div class="input-group">
+                <label for="knownTime">Known Time (seconds):</label>
+                <input type="number" id="knownTime" step="0.01" value="4.5">
+            </div>
+            <div class="input-group">
+                <label for="targetDistance">Target Distance (meters):</label>
+                <select id="targetDistance">
+                    <option value="36.576">36.576m (40yd)</option>
+                    <option value="50">50m</option>
+                    <option value="55">55m</option>
+                    <option value="60">60m</option>
+                    <option value="100" selected>100m</option>
+                    <option value="200">200m</option>
+                </select>
+            </div>
         </div>
-      </div>
-    </div>
-  );
-};
 
-export default SprintTimeConverter;
+        <div class="chart-container">
+            <h2>Performance Curve</h2>
+            <canvas id="performanceChart" class="chart"></canvas>
+        </div>
+
+        <h2>Predicted Times for All Distances</h2>
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Distance (m)</th>
+                    <th>Predicted Time (s)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        
+        <hr style="margin: 40px 0 20px 0; border: 0; border-top: 1px solid #ddd;">
+
+        <footer>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About</h3>
+                    <p>This Sprint Performance Analyzer calculates predicted sprint times across different distances using validated conversion ratios.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="https://www.brianmac.co.uk/sprints/" target="_blank">Sprint Training Resources</a></li>
+                        <li><a href="https://www.topendsports.com/testing/tests/sprint.htm" target="_blank">Sprint Testing Protocols</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Credits</h3>
+                    <p>Created by [Your Name]<br>
+                    Based on sprint performance research<br>
+                    Last updated: February 2025</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Conversion table
+        const conversionTable = {
+            distances: [36.576, 50, 55, 60, 100, 200],
+            ratios: [
+                [1, 0.7680406888, 0.6879633611, 0.6400911027, 0.4156435732, 0.1951099662],
+                [1.302022728, 1, 0.8957511648, 0.8334198251, 0.5411817046, 0.2540211598],
+                [1.453580765, 1.1164181518, 1, 0.9304168742, 0.6041668015, 0.2836335064],
+                [1.562328762, 1.1999441652, 1.0748165, 1, 0.6493506494, 0.3048232375],
+                [2.405986293, 1.8479101448, 1.6552174571, 1.54, 1, 0.4694278434],
+                [5.130391123, 3.9400926701, 3.5298386571, 3.2839024271, 2.1324041748, 1]
+            ]
+        };
+
+        // Chart reference
+        let performanceChart = null;
+
+        // Elements
+        const knownDistanceEl = document.getElementById('knownDistance');
+        const knownTimeEl = document.getElementById('knownTime');
+        const targetDistanceEl = document.getElementById('targetDistance');
+        const predictedTimeEl = document.getElementById('predictedTime');
+        const baseInfoEl = document.getElementById('baseInfo');
+        const tableBodyEl = document.getElementById('tableBody');
+
+        // Event listeners
+        knownDistanceEl.addEventListener('change', updatePredictions);
+        knownTimeEl.addEventListener('input', updatePredictions);
+        targetDistanceEl.addEventListener('change', updatePredictions);
+
+        // Initialize
+        window.onload = function() {
+            // Set up initial chart
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Sprint Time (seconds)',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Distance (meters)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Calculate initial predictions
+            updatePredictions();
+        };
+
+        function updatePredictions() {
+            const knownDistance = parseFloat(knownDistanceEl.value);
+            const knownTime = parseFloat(knownTimeEl.value);
+            const targetDistance = parseFloat(targetDistanceEl.value);
+            
+            // Validate inputs
+            if (isNaN(knownTime) || knownTime <= 0) {
+                predictedTimeEl.textContent = '--';
+                baseInfoEl.textContent = 'Please enter a valid time';
+                return;
+            }
+            
+            // Find indices
+            const knownIndex = conversionTable.distances.indexOf(knownDistance);
+            const targetIndex = conversionTable.distances.indexOf(targetDistance);
+            
+            // Calculate prediction
+            const ratio = conversionTable.ratios[targetIndex][knownIndex];
+            const calculatedTime = (knownTime * ratio).toFixed(2);
+            
+            // Update display
+            predictedTimeEl.textContent = calculatedTime + 's';
+            baseInfoEl.textContent = `Based on ${knownTime}s at ${knownDistance}m`;
+            
+            // Update chart data
+            updateChart(knownDistance, knownTime);
+            
+            // Update table
+            updateTable(knownDistance, knownTime, targetDistance);
+        }
+
+        function updateChart(knownDistance, knownTime) {
+            const knownIndex = conversionTable.distances.indexOf(knownDistance);
+            
+            // Calculate all predicted times
+            const chartData = conversionTable.distances.map((dist, index) => {
+                const ratio = conversionTable.ratios[index][knownIndex];
+                return {
+                    x: dist,
+                    y: parseFloat((knownTime * ratio).toFixed(2))
+                };
+            });
+            
+            // Update chart
+            performanceChart.data.datasets[0].data = chartData;
+            performanceChart.update();
+        }
+
+        function updateTable(knownDistance, knownTime, targetDistance) {
+            tableBodyEl.innerHTML = '';
+            const knownIndex = conversionTable.distances.indexOf(knownDistance);
+            
+            conversionTable.distances.forEach((distance, index) => {
+                // Calculate time
+                const ratio = conversionTable.ratios[index][knownIndex];
+                const time = parseFloat((knownTime * ratio).toFixed(2));
+                
+                // Create row
+                const row = document.createElement('tr');
+                if (distance === targetDistance) {
+                    row.classList.add('highlighted');
+                }
+                
+                row.innerHTML = `
+                    <td>${distance}m ${distance === 36.576 ? '(40yd)' : ''}</td>
+                    <td>${time}s</td>
+                `;
+                
+                tableBodyEl.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
