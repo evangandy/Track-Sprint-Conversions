@@ -1,370 +1,192 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprint Performance Analyzer</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
-    <!-- Load React -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
-    <!-- Load Recharts after React -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.5.0/Recharts.min.js"></script>
-</head>
-<body class="bg-gray-100">
-    <div id="app" class="max-w-4xl mx-auto p-4 bg-gray-50 rounded-lg shadow my-8">
-        <h1 class="text-2xl font-bold text-center mb-6">Sprint Performance Analyzer</h1>
+import React, { useState, useEffect } from 'react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+
+const SprintTimeConverter = () => {
+  // Conversion table from the image
+  const conversionTable = {
+    distances: [36.576, 50, 55, 60, 100, 200],
+    ratios: [
+      [1, 0.7680406888, 0.6879633611, 0.6400911027, 0.4156435732, 0.1951099662],
+      [1.302022728, 1, 0.8957511648, 0.8334198251, 0.5411817046, 0.2540211598],
+      [1.453580765, 1.1164181518, 1, 0.9304168742, 0.6041668015, 0.2836335064],
+      [1.562328762, 1.1999441652, 1.0748165, 1, 0.6493506494, 0.3048232375],
+      [2.405986293, 1.8479101448, 1.6552174571, 1.54, 1, 0.4694278434],
+      [5.130391123, 3.9400926701, 3.5298386571, 3.2839024271, 2.1324041748, 1]
+    ]
+  };
+
+  // State
+  const [knownDistance, setKnownDistance] = useState(36.576);
+  const [knownTime, setKnownTime] = useState(4.5);
+  const [targetDistance, setTargetDistance] = useState(100);
+  const [predictedTime, setPredictedTime] = useState(null);
+  const [modelTimes, setModelTimes] = useState([]);
+  // No tabs state needed
+
+  // Calculate predicted time
+  useEffect(() => {
+    if (knownDistance && knownTime && targetDistance) {
+      // Find indices
+      const knownIndex = conversionTable.distances.indexOf(parseFloat(knownDistance));
+      const targetIndex = conversionTable.distances.indexOf(parseFloat(targetDistance));
+      
+      if (knownIndex !== -1 && targetIndex !== -1) {
+        // Get ratio from table
+        const ratio = conversionTable.ratios[targetIndex][knownIndex];
+        const calculatedTime = (parseFloat(knownTime) * ratio).toFixed(2);
+        setPredictedTime(calculatedTime);
         
-        <div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="p-4 bg-white rounded shadow">
-                    <label class="block mb-2 font-semibold">Known Distance (meters)</label>
-                    <select 
-                        id="knownDistance"
-                        class="w-full p-2 border rounded"
-                    >
-                        <option value="36.576">36.576m (40yd)</option>
-                        <option value="50">50m</option>
-                        <option value="55">55m</option>
-                        <option value="60">60m</option>
-                        <option value="100">100m</option>
-                        <option value="200">200m</option>
-                    </select>
-                </div>
-                
-                <div class="p-4 bg-white rounded shadow">
-                    <label class="block mb-2 font-semibold">Known Time (seconds)</label>
-                    <input 
-                        id="knownTime"
-                        type="number" 
-                        step="0.01"
-                        class="w-full p-2 border rounded"
-                        value="4.5"
-                    />
-                </div>
-                
-                <div class="p-4 bg-white rounded shadow">
-                    <label class="block mb-2 font-semibold">Target Distance (meters)</label>
-                    <select 
-                        id="targetDistance"
-                        class="w-full p-2 border rounded"
-                    >
-                        <option value="36.576">36.576m (40yd)</option>
-                        <option value="50">50m</option>
-                        <option value="55">55m</option>
-                        <option value="60">60m</option>
-                        <option value="100" selected>100m</option>
-                        <option value="200">200m</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div id="resultSection" class="mb-6 p-6 bg-white rounded shadow text-center">
-                <h2 class="text-xl font-bold mb-2">Predicted Time</h2>
-                <p id="predictedTime" class="text-3xl font-bold text-blue-600">10.83 seconds</p>
-                <p id="baseInfo" class="text-sm text-gray-500">
-                    Based on 4.5s at 36.576m
-                </p>
-            </div>
-            
-            <div class="mb-6 p-4 bg-white rounded shadow">
-                <h2 class="text-lg font-bold mb-4">Performance Curve</h2>
-                <div id="chart" class="h-64">
-                    <!-- Chart will be rendered here -->
-                </div>
-            </div>
-            
-            <div class="mb-6 p-4 bg-white rounded shadow">
-                <h2 class="text-lg font-bold mb-4">Predicted Times for All Distances</h2>
-                <div class="overflow-x-auto">
-                    <table id="timesTable" class="min-w-full bg-white">
-                        <thead>
-                            <tr>
-                                <th class="p-3 border">Distance (m)</th>
-                                <th class="p-3 border">Predicted Time (s)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Table will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        // Calculate all times for the chart
+        const times = conversionTable.distances.map((dist, idx) => {
+          const r = conversionTable.ratios[idx][knownIndex];
+          return {
+            distance: dist,
+            time: parseFloat((parseFloat(knownTime) * r).toFixed(2))
+          };
+        });
+        setModelTimes(times);
+      }
+    }
+  }, [knownDistance, knownTime, targetDistance]);
+
+  // Format numbers with 2 decimal places
+  const formatNumber = (num) => {
+    return parseFloat(num).toFixed(2);
+  };
+
+  // No heatmap code needed anymore
+
+  // Generate comparison table data
+  const generateTimesTable = () => {
+    if (!knownDistance || !knownTime) return [];
+    
+    return conversionTable.distances.map(dist => {
+      const tableIdx = conversionTable.distances.indexOf(parseFloat(knownDistance));
+      const targetIdx = conversionTable.distances.indexOf(parseFloat(dist));
+      
+      let tableTime = null;
+      if (tableIdx !== -1 && targetIdx !== -1) {
+        const ratio = conversionTable.ratios[targetIdx][tableIdx];
+        tableTime = knownTime * ratio;
+      }
+      
+      return {
+        distance: dist,
+        tableTime: tableTime ? parseFloat(tableTime.toFixed(2)) : null
+      };
+    });
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 bg-gray-50 rounded-lg shadow">
+      <h1 className="text-2xl font-bold text-center mb-6">Sprint Performance Analyzer</h1>
+      
+      {/* No tabs needed since we only have the converter now */}
+      
+      <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-white rounded shadow">
+            <label className="block mb-2 font-semibold">Known Distance (meters)</label>
+            <select 
+              className="w-full p-2 border rounded"
+              value={knownDistance}
+              onChange={(e) => setKnownDistance(parseFloat(e.target.value))}
+            >
+              {conversionTable.distances.map(dist => (
+                <option key={dist} value={dist}>{dist}m {dist === 36.576 ? '(40yd)' : ''}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="p-4 bg-white rounded shadow">
+            <label className="block mb-2 font-semibold">Known Time (seconds)</label>
+            <input 
+              type="number" 
+              step="0.01"
+              className="w-full p-2 border rounded"
+              value={knownTime}
+              onChange={(e) => setKnownTime(e.target.value)}
+            />
+          </div>
+          
+          <div className="p-4 bg-white rounded shadow">
+            <label className="block mb-2 font-semibold">Target Distance (meters)</label>
+            <select 
+              className="w-full p-2 border rounded"
+              value={targetDistance}
+              onChange={(e) => setTargetDistance(parseFloat(e.target.value))}
+            >
+              {conversionTable.distances.map(dist => (
+                <option key={dist} value={dist}>{dist}m {dist === 36.576 ? '(40yd)' : ''}</option>
+              ))}
+            </select>
+          </div>
         </div>
-    </div>
-
-    <script>
-        // Conversion table
-        const conversionTable = {
-            distances: [36.576, 50, 55, 60, 100, 200],
-            ratios: [
-                [1, 0.7680406888, 0.6879633611, 0.6400911027, 0.4156435732, 0.1951099662],
-                [1.302022728, 1, 0.8957511648, 0.8334198251, 0.5411817046, 0.2540211598],
-                [1.453580765, 1.1164181518, 1, 0.9304168742, 0.6041668015, 0.2836335064],
-                [1.562328762, 1.1999441652, 1.0748165, 1, 0.6493506494, 0.3048232375],
-                [2.405986293, 1.8479101448, 1.6552174571, 1.54, 1, 0.4694278434],
-                [5.130391123, 3.9400926701, 3.5298386571, 3.2839024271, 2.1324041748, 1]
-            ]
-        };
-
-        // DOM elements
-        const knownDistanceSelect = document.getElementById('knownDistance');
-        const knownTimeInput = document.getElementById('knownTime');
-        const targetDistanceSelect = document.getElementById('targetDistance');
-        const predictedTimeElement = document.getElementById('predictedTime');
-        const baseInfoElement = document.getElementById('baseInfo');
-        const timesTableBody = document.querySelector('#timesTable tbody');
-        const chartContainer = document.getElementById('chart');
-
-        // Format numbers with 2 decimal places
-        const formatNumber = (num) => {
-            return parseFloat(num).toFixed(2);
-        };
-
-        // Calculate predicted time
-        const calculatePredictedTime = () => {
-            const knownDistance = parseFloat(knownDistanceSelect.value);
-            const knownTime = parseFloat(knownTimeInput.value);
-            const targetDistance = parseFloat(targetDistanceSelect.value);
-            
-            // Find indices
-            const knownIndex = conversionTable.distances.indexOf(knownDistance);
-            const targetIndex = conversionTable.distances.indexOf(targetDistance);
-            
-            if (knownIndex !== -1 && targetIndex !== -1) {
-                // Get ratio from table
-                const ratio = conversionTable.ratios[targetIndex][knownIndex];
-                const calculatedTime = formatNumber(knownTime * ratio);
-                
-                // Update UI
-                predictedTimeElement.textContent = `${calculatedTime} seconds`;
-                baseInfoElement.textContent = `Based on ${knownTime}s at ${knownDistance}m`;
-                
-                // Update table
-                updateTimesTable(knownDistance, knownTime, targetDistance);
-                
-                // Update chart data
-                const chartData = conversionTable.distances.map((dist, idx) => {
-                    const r = conversionTable.ratios[idx][knownIndex];
-                    return {
-                        distance: dist,
-                        time: parseFloat(formatNumber(knownTime * r))
-                    };
-                });
-                
-                // Render chart
-                renderChart(chartData, targetDistance);
-            }
-        };
-
-        // Generate times table
-        const updateTimesTable = (knownDistance, knownTime, targetDistance) => {
-            // Clear the table
-            timesTableBody.innerHTML = '';
-            
-            const tableIdx = conversionTable.distances.indexOf(knownDistance);
-            
-            // Add rows
-            conversionTable.distances.forEach(dist => {
-                const targetIdx = conversionTable.distances.indexOf(dist);
-                
-                let tableTime = null;
-                if (tableIdx !== -1 && targetIdx !== -1) {
-                    const ratio = conversionTable.ratios[targetIdx][tableIdx];
-                    tableTime = formatNumber(knownTime * ratio);
-                }
-                
-                const row = document.createElement('tr');
-                if (dist === targetDistance) {
-                    row.className = 'bg-blue-100';
-                }
-                
-                const distCell = document.createElement('td');
-                distCell.className = 'p-3 border';
-                distCell.textContent = dist;
-                
-                const timeCell = document.createElement('td');
-                timeCell.className = 'p-3 border';
-                timeCell.textContent = tableTime;
-                
-                row.appendChild(distCell);
-                row.appendChild(timeCell);
-                timesTableBody.appendChild(row);
-            });
-        };
-
-        // Render chart with Recharts
-        const renderChart = (data, targetDistance) => {
-            try {
-                // Make sure required libraries are available
-                if (!window.Recharts || !window.React || !window.ReactDOM) {
-                    console.error("Required libraries not loaded");
-                    renderBasicChart(data, targetDistance);
-                    return;
-                }
-                
-                // Clear the chart container
-                chartContainer.innerHTML = '';
-                
-                // Create chart element
-                const chartElement = document.createElement('div');
-                chartElement.style.width = '100%';
-                chartElement.style.height = '100%';
-                chartContainer.appendChild(chartElement);
-                
-                // Access Recharts components
-                const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
-                
-                // Create chart element with React
-                const chart = React.createElement(
-                    ResponsiveContainer,
-                    { width: '100%', height: '100%' },
-                    React.createElement(
-                        LineChart,
-                        {
-                            data: data,
-                            margin: { top: 5, right: 30, left: 20, bottom: 5 }
-                        },
-                        React.createElement(CartesianGrid, { strokeDasharray: '3 3' }),
-                        React.createElement(XAxis, { 
-                            dataKey: 'distance',
-                            label: { value: 'Distance (meters)', position: 'insideBottom', offset: -5 }
-                        }),
-                        React.createElement(YAxis, {
-                            label: { value: 'Time (seconds)', angle: -90, position: 'insideLeft' }
-                        }),
-                        React.createElement(Tooltip, { 
-                            formatter: (value) => [`${value}s`, 'Time'] 
-                        }),
-                        React.createElement(Line, { 
-                            type: 'monotone',
-                            dataKey: 'time',
-                            stroke: '#8884d8',
-                            activeDot: { r: 8 },
-                            name: 'Predicted Time'
-                        })
-                    )
-                );
-                
-                // Render the chart
-                ReactDOM.render(chart, chartElement);
-            } catch (error) {
-                console.error("Error rendering chart:", error);
-                renderBasicChart(data, targetDistance);
-            }
-        };
-
-        // Event listeners
-        knownDistanceSelect.addEventListener('change', calculatePredictedTime);
-        knownTimeInput.addEventListener('input', calculatePredictedTime);
-        targetDistanceSelect.addEventListener('change', calculatePredictedTime);
         
-        // Alternative chart implementation with Canvas for browsers without React/Recharts
-        const renderBasicChart = (data, targetDistance) => {
-            // Clear the chart container
-            chartContainer.innerHTML = '';
-            
-            // Create canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = chartContainer.clientWidth;
-            canvas.height = chartContainer.clientHeight;
-            chartContainer.appendChild(canvas);
-            
-            const ctx = canvas.getContext('2d');
-            
-            // Calculate scale
-            const padding = 40;
-            const chartWidth = canvas.width - (padding * 2);
-            const chartHeight = canvas.height - (padding * 2);
-            
-            // Find min/max values
-            const minDistance = Math.min(...data.map(d => d.distance));
-            const maxDistance = Math.max(...data.map(d => d.distance));
-            const minTime = Math.min(...data.map(d => d.time));
-            const maxTime = Math.max(...data.map(d => d.time));
-            
-            // Draw axes
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, canvas.height - padding);
-            ctx.lineTo(canvas.width - padding, canvas.height - padding);
-            ctx.stroke();
-            
-            // Draw line
-            ctx.beginPath();
-            ctx.strokeStyle = '#8884d8';
-            ctx.lineWidth = 2;
-            
-            data.forEach((point, index) => {
-                const x = padding + ((point.distance - minDistance) / (maxDistance - minDistance)) * chartWidth;
-                const y = canvas.height - padding - ((point.time - minTime) / (maxTime - minTime)) * chartHeight;
-                
-                if (index === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            });
-            
-            ctx.stroke();
-            
-            // Draw labels
-            ctx.fillStyle = '#000';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            
-            // X-axis labels
-            data.forEach(point => {
-                const x = padding + ((point.distance - minDistance) / (maxDistance - minDistance)) * chartWidth;
-                ctx.fillText(point.distance, x, canvas.height - padding + 15);
-            });
-            
-            // Y-axis label
-            ctx.save();
-            ctx.translate(padding - 25, canvas.height / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText('Time (seconds)', 0, 0);
-            ctx.restore();
-        };
+        {predictedTime && (
+          <div className="mb-6 p-6 bg-white rounded shadow text-center">
+            <h2 className="text-xl font-bold mb-2">Predicted Time</h2>
+            <p className="text-3xl font-bold text-blue-600">{predictedTime} seconds</p>
+            <p className="text-sm text-gray-500">
+              Based on {knownTime}s at {knownDistance}m
+            </p>
+          </div>
+        )}
+        
+        {modelTimes.length > 0 && (
+          <div className="mb-6 p-4 bg-white rounded shadow">
+            <h2 className="text-lg font-bold mb-4">Performance Curve</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={modelTimes} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="distance" 
+                    label={{ value: 'Distance (meters)', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Time (seconds)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip formatter={(value) => [`${value}s`, 'Time']} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="time" 
+                    stroke="#8884d8" 
+                    activeDot={{ r: 8 }}
+                    name="Predicted Time"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+        
+        <div className="mb-6 p-4 bg-white rounded shadow">
+          <h2 className="text-lg font-bold mb-4">Predicted Times for All Distances</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white">
+              <thead>
+                <tr>
+                  <th className="p-3 border">Distance (m)</th>
+                  <th className="p-3 border">Predicted Time (s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {generateTimesTable().map((item, i) => (
+                  <tr key={i} className={item.distance === parseFloat(targetDistance) ? "bg-blue-100" : ""}>
+                    <td className="p-3 border">{item.distance}</td>
+                    <td className="p-3 border">{item.tableTime}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        // Initialize
-        window.onload = function() {
-            try {
-                console.log("Libraries loaded:", {
-                    React: !!window.React,
-                    ReactDOM: !!window.ReactDOM,
-                    Recharts: !!window.Recharts
-                });
-                
-                // Calculate initial values
-                calculatePredictedTime();
-                
-                // Provide some feedback if chart isn't working
-                if (!window.Recharts || !window.React || !window.ReactDOM) {
-                    console.warn("Some libraries didn't load correctly. Using basic chart fallback.");
-                    
-                    // Get data for basic chart
-                    const knownDistance = parseFloat(knownDistanceSelect.value);
-                    const knownTime = parseFloat(knownTimeInput.value);
-                    const targetDistance = parseFloat(targetDistanceSelect.value);
-                    const knownIndex = conversionTable.distances.indexOf(knownDistance);
-                    
-                    const chartData = conversionTable.distances.map((dist, idx) => {
-                        const r = conversionTable.ratios[idx][knownIndex];
-                        return {
-                            distance: dist,
-                            time: parseFloat(formatNumber(knownTime * r))
-                        };
-                    });
-                    
-                    renderBasicChart(chartData, targetDistance);
-                }
-            } catch (error) {
-                console.error("Initialization error:", error);
-                // Fall back to basic functionality
-                calculatePredictedTime();
-            }
-        };
-    </script>
-</body>
-</html>
+export default SprintTimeConverter;
