@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sprint Performance Analyzer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.5.0/Recharts.js"></script>
+    <!-- Load React -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
+    <!-- Load Recharts after React -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.5.0/Recharts.min.js"></script>
 </head>
 <body class="bg-gray-100">
     <div id="app" class="max-w-4xl mx-auto p-4 bg-gray-50 rounded-lg shadow my-8">
@@ -191,59 +195,63 @@
 
         // Render chart with Recharts
         const renderChart = (data, targetDistance) => {
-            if (!window.Recharts) {
-                console.error("Recharts library not loaded");
-                return;
+            try {
+                // Make sure required libraries are available
+                if (!window.Recharts || !window.React || !window.ReactDOM) {
+                    console.error("Required libraries not loaded");
+                    renderBasicChart(data, targetDistance);
+                    return;
+                }
+                
+                // Clear the chart container
+                chartContainer.innerHTML = '';
+                
+                // Create chart element
+                const chartElement = document.createElement('div');
+                chartElement.style.width = '100%';
+                chartElement.style.height = '100%';
+                chartContainer.appendChild(chartElement);
+                
+                // Access Recharts components
+                const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
+                
+                // Create chart element with React
+                const chart = React.createElement(
+                    ResponsiveContainer,
+                    { width: '100%', height: '100%' },
+                    React.createElement(
+                        LineChart,
+                        {
+                            data: data,
+                            margin: { top: 5, right: 30, left: 20, bottom: 5 }
+                        },
+                        React.createElement(CartesianGrid, { strokeDasharray: '3 3' }),
+                        React.createElement(XAxis, { 
+                            dataKey: 'distance',
+                            label: { value: 'Distance (meters)', position: 'insideBottom', offset: -5 }
+                        }),
+                        React.createElement(YAxis, {
+                            label: { value: 'Time (seconds)', angle: -90, position: 'insideLeft' }
+                        }),
+                        React.createElement(Tooltip, { 
+                            formatter: (value) => [`${value}s`, 'Time'] 
+                        }),
+                        React.createElement(Line, { 
+                            type: 'monotone',
+                            dataKey: 'time',
+                            stroke: '#8884d8',
+                            activeDot: { r: 8 },
+                            name: 'Predicted Time'
+                        })
+                    )
+                );
+                
+                // Render the chart
+                ReactDOM.render(chart, chartElement);
+            } catch (error) {
+                console.error("Error rendering chart:", error);
+                renderBasicChart(data, targetDistance);
             }
-            
-            // Clear the chart container
-            chartContainer.innerHTML = '';
-            
-            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
-
-            // Create chart element
-            const chartElement = document.createElement('div');
-            chartElement.style.width = '100%';
-            chartElement.style.height = '100%';
-            chartContainer.appendChild(chartElement);
-
-            // Prepare the data for the chart
-            const chartProps = {
-                width: chartContainer.clientWidth,
-                height: chartContainer.clientHeight,
-                data: data,
-                margin: { top: 5, right: 30, left: 20, bottom: 5 },
-            };
-
-            // Render the chart
-            const chart = React.createElement(
-                ResponsiveContainer,
-                { width: '100%', height: '100%' },
-                React.createElement(
-                    LineChart,
-                    chartProps,
-                    React.createElement(CartesianGrid, { strokeDasharray: '3 3' }),
-                    React.createElement(XAxis, { 
-                        dataKey: 'distance',
-                        label: { value: 'Distance (meters)', position: 'insideBottom', offset: -5 }
-                    }),
-                    React.createElement(YAxis, {
-                        label: { value: 'Time (seconds)', angle: -90, position: 'insideLeft' }
-                    }),
-                    React.createElement(Tooltip, { 
-                        formatter: (value) => [`${value}s`, 'Time'] 
-                    }),
-                    React.createElement(Line, { 
-                        type: 'monotone',
-                        dataKey: 'time',
-                        stroke: '#8884d8',
-                        activeDot: { r: 8 },
-                        name: 'Predicted Time'
-                    })
-                )
-            );
-            
-            ReactDOM.render(chart, chartElement);
         };
 
         // Event listeners
@@ -320,55 +328,43 @@
         };
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        window.onload = function() {
             try {
-                // If Recharts is available, use it, otherwise use basic chart
-                if (window.Recharts && window.React && window.ReactDOM) {
-                    calculatePredictedTime();
-                } else {
-                    // Load React and ReactDOM from CDN
-                    const loadScript = (src) => {
-                        return new Promise((resolve, reject) => {
-                            const script = document.createElement('script');
-                            script.src = src;
-                            script.onload = resolve;
-                            script.onerror = reject;
-                            document.head.appendChild(script);
-                        });
-                    };
+                console.log("Libraries loaded:", {
+                    React: !!window.React,
+                    ReactDOM: !!window.ReactDOM,
+                    Recharts: !!window.Recharts
+                });
+                
+                // Calculate initial values
+                calculatePredictedTime();
+                
+                // Provide some feedback if chart isn't working
+                if (!window.Recharts || !window.React || !window.ReactDOM) {
+                    console.warn("Some libraries didn't load correctly. Using basic chart fallback.");
                     
-                    Promise.all([
-                        loadScript('https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js'),
-                        loadScript('https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js')
-                    ]).then(() => {
-                        calculatePredictedTime();
-                    }).catch(() => {
-                        // If React/ReactDOM fail to load, use basic chart
-                        calculatePredictedTime();
-                        
-                        // Get data for basic chart
-                        const knownDistance = parseFloat(knownDistanceSelect.value);
-                        const knownTime = parseFloat(knownTimeInput.value);
-                        const targetDistance = parseFloat(targetDistanceSelect.value);
-                        const knownIndex = conversionTable.distances.indexOf(knownDistance);
-                        
-                        const chartData = conversionTable.distances.map((dist, idx) => {
-                            const r = conversionTable.ratios[idx][knownIndex];
-                            return {
-                                distance: dist,
-                                time: parseFloat(formatNumber(knownTime * r))
-                            };
-                        });
-                        
-                        renderBasicChart(chartData, targetDistance);
+                    // Get data for basic chart
+                    const knownDistance = parseFloat(knownDistanceSelect.value);
+                    const knownTime = parseFloat(knownTimeInput.value);
+                    const targetDistance = parseFloat(targetDistanceSelect.value);
+                    const knownIndex = conversionTable.distances.indexOf(knownDistance);
+                    
+                    const chartData = conversionTable.distances.map((dist, idx) => {
+                        const r = conversionTable.ratios[idx][knownIndex];
+                        return {
+                            distance: dist,
+                            time: parseFloat(formatNumber(knownTime * r))
+                        };
                     });
+                    
+                    renderBasicChart(chartData, targetDistance);
                 }
             } catch (error) {
                 console.error("Initialization error:", error);
                 // Fall back to basic functionality
                 calculatePredictedTime();
             }
-        });
+        };
     </script>
 </body>
 </html>
